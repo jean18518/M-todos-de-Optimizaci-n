@@ -1,0 +1,100 @@
+import pandas as pd
+import sklearn.ensemble
+import sklearn.model_selection
+import optuna
+
+# Cargar el dataset
+data = pd.read_csv("peru_population.csv")
+
+# Selección de variables
+X = data.drop(columns=["target"])  # Características
+y = data["target"]  # Etiqueta (por ejemplo, un target binario como 0 o 1)
+
+# Función objetivo
+def objective(trial):
+    # Definir los hiperparámetros a optimizar
+    n_estimators = trial.suggest_int("n_estimators", 10, 100)
+    max_depth = trial.suggest_int("max_depth", 1, 32)
+    
+    clf = sklearn.ensemble.RandomForestClassifier(
+        n_estimators=n_estimators, 
+        max_depth=max_depth
+    )
+    
+    return sklearn.model_selection.cross_val_score(
+        clf, X, y, n_jobs=-1, cv=3
+    ).mean()
+
+study = optuna.create_study(direction="maximize")
+study.optimize(objective, n_trials=50)
+
+print("Mejor precisión:", study.best_value)
+print("Mejores hiperparámetros:", study.best_params)
+
+# Búsqueda Básica de Hiperparámetros
+def objective(trial):
+    # Cargar el dataset
+    data = pd.read_csv("peru_population.csv")
+    
+    X = data.drop(columns=["target"])  # Características
+    y = data["target"]  # Etiqueta
+
+    n_estimators = trial.suggest_int("n_estimators", 2, 20)
+    max_depth = trial.suggest_int("max_depth", 1, 32)
+    
+    clf = sklearn.ensemble.RandomForestClassifier(
+        n_estimators=n_estimators, 
+        max_depth=max_depth
+    )
+    
+    return sklearn.model_selection.cross_val_score(
+        clf, X, y, n_jobs=-1, cv=3
+    ).mean()
+
+study = optuna.create_study(direction="maximize")
+study.optimize(objective, n_trials=50)
+
+print("Mejor precisión:", study.best_value)
+print("Mejores hiperparámetros:", study.best_params)
+
+# Optimización Avanzada con Condicionales
+def objective(trial):
+    data = pd.read_csv("peru_population.csv")
+    
+    # Selección de variables
+    X = data.drop(columns=["target"])
+    y = data["target"]
+    
+    # Elección del modelo
+    classifier = trial.suggest_categorical("clasificador", ["RandomForest", "SVM"])
+    
+    if classifier == "RandomForest":
+        n_estimators = trial.suggest_int("n_estimators", 10, 100)
+        max_depth = trial.suggest_int("max_depth", 2, 32)
+        clf = sklearn.ensemble.RandomForestClassifier(
+            n_estimators=n_estimators, 
+            max_depth=max_depth
+        )
+    else:
+        C = trial.suggest_float("svm_c", 1e-5, 1e5, log=True)
+        clf = sklearn.svm.SVC(C=C, gamma="auto")
+    
+    return sklearn.model_selection.cross_val_score(
+        clf, X, y, cv=3, n_jobs=-1
+    ).mean()
+
+study = optuna.create_study(direction="maximize")
+study.optimize(objective, n_trials=100)
+
+# Visualización de Resultados
+import optuna.visualization
+
+# Historial de Optimización
+optuna.visualization.plot_optimization_history(study)
+
+# Análisis de Hiperparámetros
+# Relación entre parámetros:
+optuna.visualization.plot_parallel_coordinate(study)
+
+# Importancia de Hiperparámetros:
+optuna.visualization.plot_param_importances(study)
